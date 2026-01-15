@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth System - API Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app"></div>
+
+    <script>
+        // API Client Configuration
+        const API_BASE = '/api';
+        
+        // State Management
+        const state = {
+            token: localStorage.getItem('authToken') || null,
+            user: null,
+            currentView: 'login'
+        };
+
+        // API Client
+        const api = {
+            async request(endpoint, options = {}) {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+
+                if (state.token) {
+                    headers['Authorization'] = `Token ${state.token}`;
+                }
+
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw data;
+                }
+
+                return data;
+            },
+
+            async register(userData) {
+                return this.request('/auth/register/', {
+                    method: 'POST',
+                    body: JSON.stringify(userData)
+                });
+            },
+
+            async login(credentials) {
+                return this.request('/auth/login/', {
+                    method: 'POST',
+                    body: JSON.stringify(credentials)
+                });
+            },
+
+            async logout() {
+                return this.request('/auth/logout/', {
+                    method: 'POST'
+                });
+            },
+
+            async getProfile() {
+                return this.request('/profile/');
+            },
+
+            async updateProfile(profileData) {
+                return this.request('/profile/update/', {
+                    method: 'PUT',
+                    body: JSON.stringify(profileData)
+                });
+            },
+
+            async updateUserInfo(userInfo) {
+                return this.request('/user/update/', {
+                    method: 'PUT',
+                    body: JSON.stringify(userInfo)
+                });
+            },
+
+            async changePassword(passwordData) {
+                return this.request('/auth/change-password/', {
+                    method: 'POST',
+                    body: JSON.stringify(passwordData)
+                });
+            }
+        };
+
+        // UI Components
+        const components = {
+            navigation() {
+                return `
+                    <nav class="bg-white shadow-lg mb-8">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div class="flex justify-between h-16">
+                                <div class="flex items-center">
+                                    <h1 class="text-xl font-bold text-gray-800">Auth System API</h1>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    ${state.user ? `
+                                        <span class="text-gray-700">Welcome, ${state.user.full_name}</span>
+                                        <button onclick="app.showView('profile')" class="text-blue-600 hover:text-blue-800">Profile</button>
+                                        <button onclick="app.logout()" class="text-red-600 hover:text-red-800">Logout</button>
+                                    ` : `
+                                        <button onclick="app.showView('login')" class="text-blue-600 hover:text-blue-800">Login</button>
+                                        <button onclick="app.showView('register')" class="text-blue-600 hover:text-blue-800">Register</button>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                `;
+            },
+
+            loginForm() {
+                return `
+                    <div class="max-w-md mx-auto">
+                        <div class="bg-white rounded-lg shadow-lg p-8">
+                            <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Login</h2>
+                            <form onsubmit="app.handleLogin(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input type="email" name="email" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                    <input type="password" name="password" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
+                                    Login
+                                </button>
+                            </form>
+                            <p class="mt-4 text-center text-sm text-gray-600">
+                                Don't have an account? 
+                                <button onclick="app.showView('register')" class="text-blue-600 hover:text-blue-800 font-medium">
+                                    Register here
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            registerForm() {
+                return `
+                    <div class="max-w-md mx-auto">
+                        <div class="bg-white rounded-lg shadow-lg p-8">
+                            <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Register</h2>
+                            <form onsubmit="app.handleRegister(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input type="email" name="email" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                    <input type="text" name="first_name" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                    <input type="text" name="last_name" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                    <input type="password" name="password" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                                    <input type="password" name="password_confirm" required 
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
+                                    Register
+                                </button>
+                            </form>
+                            <p class="mt-4 text-center text-sm text-gray-600">
+                                Already have an account? 
+                                <button onclick="app.showView('login')" class="text-blue-600 hover:text-blue-800 font-medium">
+                                    Login here
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            profileView() {
+                if (!state.user) return '';
+
+                return `
+                    <div class="max-w-4xl mx-auto">
+                        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-12">
+                                <div class="flex items-center space-x-6">
+                                    <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center text-3xl font-bold text-blue-600">
+                                        ${state.user.first_name[0]}${state.user.last_name[0]}
+                                    </div>
+                                    <div class="text-white">
+                                        <h1 class="text-3xl font-bold">${state.user.full_name}</h1>
+                                        <p class="text-blue-100">${state.user.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="px-8 py-6">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h2 class="text-2xl font-bold text-gray-900">Profile Information</h2>
+                                    <div class="space-x-2">
+                                        <button onclick="app.showView('editInfo')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                            Edit Info
+                                        </button>
+                                        <button onclick="app.showView('editProfile')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                                            Edit Profile
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div class="border-l-4 border-blue-500 pl-4">
+                                        <p class="text-sm text-gray-600">First Name</p>
+                                        <p class="text-lg font-semibold">${state.user.first_name}</p>
+                                    </div>
+                                    <div class="border-l-4 border-blue-500 pl-4">
+                                        <p class="text-sm text-gray-600">Last Name</p>
+                                        <p class="text-lg font-semibold">${state.user.last_name}</p>
+                                    </div>
+                                    ${state.user.profile.bio ? `
+                                        <div class="border-l-4 border-green-500 pl-4 col-span-2">
+                                            <p class="text-sm text-gray-600">Bio</p>
+                                            <p class="text-gray-900">${state.user.profile.bio}</p>
+                                        </div>
+                                    ` : ''}
+                                    ${state.user.profile.location ? `
+                                        <div class="border-l-4 border-green-500 pl-4">
+                                            <p class="text-sm text-gray-600">Location</p>
+                                            <p class="text-gray-900">${state.user.profile.location}</p>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            editProfileForm() {
+                if (!state.user) return '';
+
+                return `
+                    <div class="max-w-2xl mx-auto">
+                        <div class="bg-white rounded-lg shadow-lg p-8">
+                            <h2 class="text-3xl font-bold text-gray-900 mb-6">Update Profile</h2>
+                            <form onsubmit="app.handleUpdateProfile(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                                    <textarea name="bio" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">${state.user.profile.bio || ''}</textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                    <input type="text" name="location" value="${state.user.profile.location || ''}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                    <input type="text" name="phone_number" value="${state.user.profile.phone_number || ''}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="flex space-x-4">
+                                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
+                                        Update Profile
+                                    </button>
+                                    <button type="button" onclick="app.showView('profile')" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        // Application Logic
+        const app = {
+            init() {
+                if (state.token) {
+                    this.loadProfile();
+                } else {
+                    this.render();
+                }
+            },
+
+            async loadProfile() {
+                try {
+                    const data = await api.getProfile();
+                    state.user = data;
+                    state.currentView = 'profile';
+                    this.render();
+                } catch (error) {
+                    state.token = null;
+                    localStorage.removeItem('authToken');
+                    this.render();
+                }
+            },
+
+            showView(view) {
+                state.currentView = view;
+                this.render();
+            },
+
+            async handleLogin(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const credentials = Object.fromEntries(formData);
+
+                try {
+                    const data = await api.login(credentials);
+                    state.token = data.token;
+                    state.user = data.user;
+                    localStorage.setItem('authToken', data.token);
+                    this.showView('profile');
+                    alert('Login successful!');
+                } catch (error) {
+                    alert(error.error || 'Login failed');
+                }
+            },
+
+            async handleRegister(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const userData = Object.fromEntries(formData);
+
+                try {
+                    const data = await api.register(userData);
+                    state.token = data.token;
+                    state.user = data.user;
+                    localStorage.setItem('authToken', data.token);
+                    this.showView('profile');
+                    alert('Registration successful!');
+                } catch (error) {
+                    alert(JSON.stringify(error.errors || error));
+                }
+            },
+
+            async handleUpdateProfile(event) {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const profileData = Object.fromEntries(formData);
+
+                try {
+                    await api.updateProfile(profileData);
+                    await this.loadProfile();
+                    alert('Profile updated successfully!');
+                } catch (error) {
+                    alert('Update failed');
+                }
+            },
+
+            async logout() {
+                try {
+                    await api.logout();
+                } finally {
+                    state.token = null;
+                    state.user = null;
+                    localStorage.removeItem('authToken');
+                    this.showView('login');
+                }
+            },
+
+            render() {
+                const views = {
+                    login: components.loginForm,
+                    register: components.registerForm,
+                    profile: components.profileView,
+                    editProfile: components.editProfileForm
+                };
+
+                const html = `
+                    ${components.navigation()}
+                    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        ${views[state.currentView]()}
+                    </main>
+                `;
+
+                document.getElementById('app').innerHTML = html;
+            }
+        };
+
+        // Initialize app
+        app.init();
+    </script>
+</body>
+</html>
