@@ -1,5 +1,5 @@
 
-const API_BASE = '/api/accounts';
+const API_BASE = 'http://127.0.0.1:8000/api/accounts';
 
 const api = {
     async request(endpoint, options = {}) {
