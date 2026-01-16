@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+<div class="bg-white p-8 rounded shadow w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
+
+    <div id="errorBox" class="hidden bg-red-100 text-red-700 p-3 mb-4 rounded"></div>
+
+    <form id="loginForm" class="space-y-4">
+        <input name="email" type="email" placeholder="Email" required class="w-full p-2 border rounded">
+        <input name="password" type="password" placeholder="Password" required class="w-full p-2 border rounded">
+        <button class="w-full bg-blue-600 text-white py-2 rounded">Login</button>
+    </form>
+
+    <p class="text-center mt-4 text-sm">
+        No account?
+        <a href="register.html" class="text-blue-600">Register</a>
+    </p>
+</div>
+
+<script src="api.js"></script>
+<script src="errors.js"></script>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    errorBox.classList.add('hidden');
+
+    const data = Object.fromEntries(new FormData(e.target));
+
+    try {
+        const res = await api.login(data);
+        localStorage.setItem('authToken', res.token);
+        window.location.href = 'profile.html';
+    } catch (err) {
+        errorBox.textContent = parseDRFError(err);
+        errorBox.classList.remove('hidden');
+    }
+});
+</script>
+</body>
+</html>
